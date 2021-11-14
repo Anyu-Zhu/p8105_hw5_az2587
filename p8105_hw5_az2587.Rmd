@@ -1,0 +1,69 @@
+---
+title: "p8105_hw5_az2587"
+author: "Anyu Zhu"
+date: "11/13/2021"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(ggplot2)
+```
+
+## Problem 1
+
+```{r}
+homicides <- 
+  read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(city_state = str_c(city, state, sep = ", "),
+         status = case_when(
+           disposition == "Closed without arrest" ~ "unsolved",
+           disposition == "Open/No arrest" ~ "unsolved",
+           disposition == "Closed by arrest" ~ "solved"
+         ))
+```
+Describe the raw data
+
+the total number of homicides and the number of unsolved homicides
+```{r}
+homicides_summary = 
+  homicides %>% 
+  group_by(city_state) %>% 
+  summarize(
+    homicides_total = n(),
+    homicides_unsolved = sum(status == "unsolved")
+  ) 
+
+homicides_summary %>% 
+  knitr::kable()
+```
+
+the proportion of homicides that are unsolved at the city of Baltimore, MD is 
+```{r}
+MD_unsolved = 
+  prop.test(
+  homicides_summary %>% filter(city_state == "Baltimore, MD") %>% pull(homicides_unsolved),
+  homicides_summary %>% filter(city_state == "Baltimore, MD") %>% pull(homicides_total)
+)
+
+MD_unsolved %>% 
+  broom::tidy()
+```
+
+extract the proportion of unsolved homicides and the confidence interval for all cities
+```{r}
+all_unsolved = homicides_summary %>% 
+  mutate(
+    test = map2(.x = homicides_unsolved, .y = homicides_total, ~prop.test(x = .x, n = .y)),
+    prop = map(.x = test, ~broom::tidy(.x))
+  ) %>% 
+  unnest(prop)
+```
+
+
+
