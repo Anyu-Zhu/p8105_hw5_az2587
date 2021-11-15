@@ -43,9 +43,9 @@ homicides <-
            disposition == "Closed by arrest" ~ "solved"
          ))
 ```
-Describe the raw data
+The dataset from the Washington Post contains `r ncol(homicides)` variables and `r nrow(homicides)` observations. The variables contains: `r colnames(homicides)`.
 
-the total number of homicides and the number of unsolved homicides
+The total number of homicides and the number of unsolved homicides:
 ```{r}
 homicides_summary = 
   homicides %>% 
@@ -59,7 +59,7 @@ homicides_summary %>%
   knitr::kable()
 ```
 
-the proportion of homicides that are unsolved at the city of Baltimore, MD is 
+The proportion of homicides that are unsolved at the city of Baltimore, MD is:
 ```{r}
 MD_unsolved = 
   prop.test(
@@ -71,7 +71,7 @@ MD_unsolved %>%
   broom::tidy()
 ```
 
-extract the proportion of unsolved homicides and the confidence interval for all cities
+The proportion of unsolved homicides and the confidence interval for all cities:
 ```{r}
 all_unsolved = homicides_summary %>% 
   mutate(
@@ -80,10 +80,9 @@ all_unsolved = homicides_summary %>%
   ) %>% 
   unnest(prop) %>% 
   select(city_state, estimate, conf.low, conf.high)
-  
 ```
 
-a plot that shows the estimates and CIs for each city
+A plot that shows the estimates and CIs for each city:
 ```{r}
 all_unsolved %>% 
   mutate(city_state = fct_reorder(city_state, estimate)) %>% 
@@ -99,7 +98,7 @@ all_unsolved %>%
 ```
 
 ## Problem 2
-```{r}
+```{r, message=FALSE}
 longitudinal = tibble(
   dirs = list.files(path = "data", pattern = "*.csv", full.names = TRUE),
   df = map(.x = dirs, ~read_csv(.x))
@@ -108,21 +107,52 @@ longitudinal = tibble(
   separate(name, into = c("arm", "id", "csv")) %>% 
   select(-file, -csv) %>% 
   unnest(df) %>% 
+  mutate(arm = as.factor(arm)) %>% 
   pivot_longer(week_1: week_8,
                names_to = "week",
                values_to = "observation",
                names_prefix = "week_")
+
+longitudinal
 ```
 
-a spaghetti plot showing observations on each subject over time
+A spaghetti plot showing observations on each subject over time
 ```{r}
-
+longitudinal %>% 
+  mutate(group = str_c(arm, id, sep = "_")) %>% 
+  ggplot(aes(x = week, y = observation, colour = arm)) +
+  geom_point() +
+  geom_line(aes(group = group), alpha = 0.5) +
+  labs(title = "Observations on each subject over time")
 ```
 
-differences between groups:
-
+From the plot we can see that as the time increases, the observed values in the experiment arm tend to increase while there is no significant difference happening in the control arm. 
 
 ## Problem 3
+```{r}
+set.seed(1234)
+
+iris_with_missing = iris %>% 
+  map_df(~replace(.x, sample(1:150, 20), NA)) %>%
+  mutate(Species = as.character(Species))
+```
+
+For numeric variables, fill in missing values with the mean of non-missing values
+For character variables, fill in missing values with "virginica"
+```{r}
+replace_missing = function(x){
+  if (is.numeric(x)) {
+    x = replace_na(x, mean(x, na.rm = TRUE))
+  }else if(is.character(x)){
+    x =replace_na(x, "virginica")
+  }
+}
+
+iris_full = map(iris_with_missing, replace_missing) %>% 
+  as_tibble()
+
+iris_full
+```
 
 
 
